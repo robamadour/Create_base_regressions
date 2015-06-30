@@ -26,6 +26,7 @@ def read_file(input_file, fy=1870, ly=2010):
 
     update_code_map()
 
+
 def update_code_map():
     liszt = Country.country_list
     c_map = {}
@@ -35,33 +36,25 @@ def update_code_map():
 
     Country.code_map = c_map
 
-def read_exits(input_file, exc_file, opt=False):
-
-    ex_countries = []
-    with open(exc_file) as f:
-        for line in f:
-            sp = re.split("\\t|\\n", line)
-            ex_countries.append(int(sp[0]))
-
+def read_exits(input_file):
     exits = []
     with open(input_file) as f:
         for idx, line in enumerate(f):
             if idx > 0:
                 sp = re.split("\\t|\\n", line)
-                if (not opt) and (int(sp[0]) not in ex_countries):
-                    exits.append([int(sp[0]), int(sp[1])])
+                # sp = sp[:-1]
+                exits.append([int(sp[0]), int(sp[1])])
 
     return exits
 
-def print_dummies_file(output_file, exc_file, exits, fy=1870, ly=2010):
-    c_list = exclude_countries(exc_file)
-    n_countries = len(c_list)
+def print_dummies_file(output_file, exits, fy=1870, ly=2010):
+    n_countries = len(Country.country_list)
     n_years = ly - fy
 
     dummies = []
     line = ""
     for i in range(n_countries):
-        c_code = c_list[i].code
+        c_code = Country.country_list[i].code
         dummies.append(Dummy("country", c_code))
         line += "COUNTRY_" + str(c_code) + "\t"
     for year in range(fy + 1, ly + 1):
@@ -77,7 +70,7 @@ def print_dummies_file(output_file, exc_file, exits, fy=1870, ly=2010):
     line = line[:-1] + "\n"
 
     for year in range(fy+1, ly+1):
-        for country in c_list:
+        for country in Country.country_list:
             for dummy in dummies:
                 line += str(dummy.get_value(year, country.code)) + "\t"
             line = line[:-1] + "\n"
@@ -87,32 +80,15 @@ def print_dummies_file(output_file, exc_file, exits, fy=1870, ly=2010):
     f.write(line)
     f.close()
 
-def exclude_countries(exc_file, opt=False):
 
-    if opt:
-        return Country.country_list
-
-    ex_countries = []
-    with open(exc_file) as f:
-        for line in f:
-            sp = re.split("\\t|\\n", line)
-            ex_countries.append(int(sp[0]))
-
-    c_list = []
-    for country in Country.country_list:
-        if country.code not in ex_countries:
-            c_list.append(country)
-
-    return c_list
-
-def print_base_file(output_file, exc_file, fy=1870, ly=2010, coma=False,
-                    ff="{0:.6f}"):
+def print_base_file(output_file, fy=1870, ly=2010, coma=False, ff="{0:.6f}"):
     line = "GROWTH\tCOUNTRY\tCOUNTRY1\tYEAR\tGDP\n"
     for year in range(fy+1, ly+1):
-        for country in exclude_countries(exc_file):
+        for country in Country.country_list:
             country.compute_growths()
             growth = country.growth[year]
             gdp = country.gdp[year]
+
             if coma:
                 if growth != 'NA':
                     growth = ff.format(growth)
@@ -134,14 +110,13 @@ work_dir = "C:\\Users\\Roberto\\Google Drive\\Memoria\\Codigo\\R\\1\\"
 input_file = work_dir + "GDP_base_punto.txt"
 output_file_c = work_dir + "GROWTH_BASE_coma.txt"
 output_file_p = work_dir + "GROWTH_BASE_punto.txt"
-exceptions_file = work_dir + "excepciones.txt"
 
 read_file(input_file)
-print_base_file(output_file_p, exceptions_file)
-print_base_file(output_file_c, exceptions_file, coma=True)
+print_base_file(output_file_p)
+print_base_file(output_file_c, coma=True)
 
 exits_file = work_dir + "salidas_base.txt"
-exits = read_exits(exits_file, exceptions_file)
+exits = read_exits(exits_file)
 
 dummies_file = work_dir + "DUMMIES.txt"
-print_dummies_file(dummies_file, exceptions_file, exits)
+print_dummies_file(dummies_file, exits)
